@@ -12,15 +12,14 @@ TLS certificates are verified against the Windows certificate store.
 from __future__ import annotations
 
 import json
-import os
 import re
-from pathlib import Path
 from typing import Any
 
 import requests
 import truststore
 
 from .i18n import T
+from .instance_id import effective_config_dir
 
 __all__ = [
     'API_URL_USAGE', 'API_URL_PROFILE', 'API_URL_PREPAID_CREDITS', 'CLAUDE_CONFIG_DIR', 'CLAUDE_CREDENTIALS',
@@ -31,7 +30,7 @@ __all__ = [
 API_URL_USAGE = 'https://api.anthropic.com/api/oauth/usage'
 API_URL_PROFILE = 'https://api.anthropic.com/api/oauth/profile'
 API_URL_PREPAID_CREDITS = 'https://api.anthropic.com/api/oauth/organizations/{org_uuid}/prepaid/credits'
-CLAUDE_CONFIG_DIR = Path(os.environ.get('CLAUDE_CONFIG_DIR', '')) if os.environ.get('CLAUDE_CONFIG_DIR') else Path.home() / '.claude'
+CLAUDE_CONFIG_DIR = effective_config_dir()
 CLAUDE_CREDENTIALS = CLAUDE_CONFIG_DIR / '.credentials.json'
 _FALLBACK_USER_AGENT = 'claude-code/2.1.204'
 _ORG_UUID_PATTERN = re.compile(r'\A[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\Z')

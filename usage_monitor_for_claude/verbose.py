@@ -16,6 +16,7 @@ import os
 import sys
 from pathlib import Path
 
+from .instance_id import effective_config_dir
 from .platforms import (
     DIAGNOSTIC_PACKAGES, diagnostic_display_rows, diagnostic_post_init_rows,
     diagnostic_runtime_rows, diagnostic_system_rows, setup_console,
@@ -65,8 +66,7 @@ def _redact_home(path_str: str) -> str:
 
 def _credentials_status() -> str:
     """Check if the credentials file exists (never reads its content)."""
-    config_dir = Path(os.environ.get('CLAUDE_CONFIG_DIR', '')) if os.environ.get('CLAUDE_CONFIG_DIR') else Path.home() / '.claude'
-    cred_path = config_dir / '.credentials.json'
+    cred_path = effective_config_dir() / '.credentials.json'
     display_path = _redact_home(str(cred_path))
 
     if cred_path.exists():

@@ -18,6 +18,7 @@ from usage_monitor_for_claude.api import (
     fetch_prepaid_credits, fetch_usage, read_access_token,
 )
 from usage_monitor_for_claude.i18n import LOCALE_DIR
+from usage_monitor_for_claude.instance_id import effective_config_dir
 
 EN = json.loads((LOCALE_DIR / 'en.json').read_text(encoding='utf-8'))
 
@@ -39,8 +40,9 @@ class TestClaudeConfigDir(unittest.TestCase):
                 import usage_monitor_for_claude.api as api_mod
                 importlib.reload(api_mod)
                 try:
-                    self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, Path.home() / '.claude')
-                    self.assertEqual(api_mod.CLAUDE_CREDENTIALS, Path.home() / '.claude' / '.credentials.json')
+                    expected = (Path.home() / '.claude').resolve()
+                    self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, expected)
+                    self.assertEqual(api_mod.CLAUDE_CREDENTIALS, expected / '.credentials.json')
                 finally:
                     importlib.reload(api_mod)
 
@@ -52,8 +54,24 @@ class TestClaudeConfigDir(unittest.TestCase):
                 import usage_monitor_for_claude.api as api_mod
                 importlib.reload(api_mod)
                 try:
-                    self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, Path(tmp))
-                    self.assertEqual(api_mod.CLAUDE_CREDENTIALS, Path(tmp) / '.credentials.json')
+                    self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, Path(tmp).resolve())
+                    self.assertEqual(api_mod.CLAUDE_CREDENTIALS, Path(tmp).resolve() / '.credentials.json')
+                finally:
+                    importlib.reload(api_mod)
+
+    def test_matches_instance_id_helper(self):
+        """The credentials directory is the one instance_id derives for this instance."""
+        with TemporaryDirectory() as tmp:
+            # A spelling that only compares equal once resolved, so an inlined
+            # derivation that skips the resolution fails this assertion.
+            (Path(tmp) / 'sub').mkdir()
+            with patch.dict('os.environ', {'CLAUDE_CONFIG_DIR': str(Path(tmp) / 'sub' / '..')}):
+                import importlib
+                import usage_monitor_for_claude.api as api_mod
+                importlib.reload(api_mod)
+                try:
+                    self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, effective_config_dir())
+                    self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, Path(tmp).resolve())
                 finally:
                     importlib.reload(api_mod)
 
@@ -64,7 +82,7 @@ class TestClaudeConfigDir(unittest.TestCase):
             import usage_monitor_for_claude.api as api_mod
             importlib.reload(api_mod)
             try:
-                self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, Path.home() / '.claude')
+                self.assertEqual(api_mod.CLAUDE_CONFIG_DIR, (Path.home() / '.claude').resolve())
             finally:
                 importlib.reload(api_mod)
 
