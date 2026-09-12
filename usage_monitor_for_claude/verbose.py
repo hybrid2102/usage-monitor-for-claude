@@ -44,6 +44,22 @@ def _package_version(name: str) -> str:
         return 'not found'
 
 
+def _home_spellings() -> tuple[str, ...]:
+    """Return the home directory as it is spelled and as it resolves.
+
+    Resolving fails on a home directory behind a symlink loop (a
+    ``RuntimeError`` up to Python 3.12) and on an unreachable network
+    path.  The diagnostics have to print either way, so only the literal
+    spelling is compared there.
+    """
+    home_dir = Path.home()
+
+    try:
+        return (str(home_dir), str(home_dir.resolve()))
+    except (OSError, RuntimeError):
+        return (str(home_dir),)
+
+
 def _redact_home(path_str: str) -> str:
     """Replace the user's home directory with ``~`` to avoid exposing the username.
 
@@ -51,15 +67,24 @@ def _redact_home(path_str: str) -> str:
     ``CLAUDE_CONFIG_DIR`` set externally may be differently cased) and
     boundary-aware, so a sibling profile whose name merely starts with the
     username is not partially redacted.
-    """
-    home = str(Path.home())
-    normalized_path = os.path.normcase(path_str)
-    normalized_home = os.path.normcase(home)
 
-    if normalized_path == normalized_home:
-        return '~'
-    if normalized_path.startswith(normalized_home + os.sep):
-        return '~' + path_str[len(home):]
+    Both the literal and the resolved spelling of the home directory are
+    compared, because the paths reaching this function differ: the
+    credentials path arrives resolved, while ``sys.executable``,
+    ``sys._MEIPASS`` and the ``CLAUDE_CONFIG_DIR`` row keep the spelling
+    they were given.  Where the home directory is reached through a symlink
+    or a junction those two spellings differ, and matching only one of them
+    would print the username in full.
+    """
+    normalized_path = os.path.normcase(path_str)
+
+    for home_spelling in _home_spellings():
+        normalized_home = os.path.normcase(home_spelling)
+
+        if normalized_path == normalized_home:
+            return '~'
+        if normalized_path.startswith(normalized_home + os.sep):
+            return '~' + path_str[len(home_spelling):]
 
     return path_str
 
